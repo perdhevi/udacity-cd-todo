@@ -8,13 +8,44 @@ import * as AWS from 'aws-sdk';
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
 //TODO: Add authorization
 
-  const todoId = event.pathParameters.todoId
+  const _todoId = event.pathParameters.todoId
   const docClient = new AWS.DynamoDB.DocumentClient();
   const todoTable = process.env.TODO_TABLE;
 
   // DONE: Remove a TODO item by id
-  return await docClient.delete({
+
+  const queryRest = await docClient.query({
     TableName: todoTable,
-    Key: { 'todoId': todoId}
-  }).promise().then(res => res).catch(err => err);
+    KeyConditionExpression: 'todoId = :paritionKey',
+    ExpressionAttributeValues: {
+      ':paritionKey': _todoId
+    }
+  })
+  .promise();  
+  if(queryRest.Count === 0 ){
+    return {
+      statusCode: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*'
+      },
+      body:"{ message: empty }"
+       
+    }
+  }
+  await docClient.delete({
+    TableName: todoTable,
+    Key: { 
+      'todoId': _todoId,
+      'createdAt' : queryRest.Items[0].createdAt
+    }
+  }).promise().then(res => res).catch(err => console.log(err));
+
+  return {
+    statusCode: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*'
+    },
+    body:""
+     
+  }
 }
