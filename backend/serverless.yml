@@ -41,6 +41,12 @@ provider:
         - dynamodb:DescribeTable
         - dynamodb:Query
         - dynamodb:Scan
+      Resource:  arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODO_TABLE}/*
+    - Effect: Allow
+      Action:
+        - dynamodb:DescribeTable
+        - dynamodb:Query
+        - dynamodb:Scan
         - dynamodb:PutItem
         - dynamodb:GetItem
         - dynamodb:UpdateItem
@@ -85,6 +91,8 @@ functions:
       - http:
           method: get
           path: todos
+          authorizer: Auth
+          cors: true
 
   # TODO: Configure this function
   CreateTodo:
@@ -93,6 +101,9 @@ functions:
       - http:
           method: post
           path: todos
+          authorizer: Auth
+          cors: true
+
 
   # TODO: Configure this function
   UpdateTodo:
@@ -101,6 +112,8 @@ functions:
       - http:
           method: patch
           path: todos/{todoId}
+          authorizer: Auth
+          cors: true
 
   # TODO: Configure this function
   DeleteTodo:
@@ -109,6 +122,8 @@ functions:
       - http:
           method: delete
           path: todos/{todoId}
+          authorizer: Auth
+          cors: true
 
   # TODO: Configure this function
   GenerateUploadUrl:
@@ -117,6 +132,9 @@ functions:
       - http:
           method: post
           path: todos/{todoId}/attachment
+          authorizer: Auth
+          cors: true
+
 
   SendUploadNotification:
     environment:
@@ -147,14 +165,14 @@ functions:
       - websocket:
           route: $disconnect  
 
-  SyncWithElasticSearch:
-    environment:
-      ES_ENDPOINT: ImageSearch.DomainEndpoint
-    handler: src/lambda/dynamoDb/elasticSearchSync.handler
-    events:
-      - stream:
-          type: dynamodb
-          arn: !GetAtt TodosDynamoDBTable.StreamArn
+#  SyncWithElasticSearch:
+#    environment:
+#      ES_ENDPOINT: ImageSearch.DomainEndpoint
+#    handler: src/lambda/dynamoDb/elasticSearchSync.handler
+#    events:
+#      - stream:
+#          type: dynamodb
+#          arn: !GetAtt TodosDynamoDBTable.StreamArn
 
 resources:
   Resources:
@@ -167,21 +185,19 @@ resources:
         AttributeDefinitions:
           - AttributeName: todoId
             AttributeType: S
-          - AttributeName: createdAt
-            AttributeType: S
-          - AttributeName: name
+          - AttributeName: userId
             AttributeType: S
         KeySchema:
           - AttributeName: todoId
             KeyType: HASH        
-          - AttributeName: createdAt
+          - AttributeName: userId
             KeyType: RANGE        
-        LocalSecondaryIndexes:
+        GlobalSecondaryIndexes:
           - IndexName: ${self:provider.environment.INDEX_NAME}
             KeySchema:
-              - AttributeName: todoId
+              - AttributeName: userId
                 KeyType: HASH
-              - AttributeName: name
+              - AttributeName: todoId
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL # What attributes will be copied to an index
@@ -224,6 +240,7 @@ resources:
               KeyType: HASH
             Projection:
               ProjectionType: ALL
+
     AttachmentsBucket:
       Type: AWS::S3::Bucket
       DependsOn: SNSTopicPolicy
@@ -296,29 +313,39 @@ resources:
               Action: 's3:GetObject'
               Resource: 'arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}/*'
         Bucket: !Ref AttachmentsBucket
+    GatewayResponseDefault4xx:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Header: "'Content-Type, X-Amz-Date,Authorization'"
+          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,OPTIONS,POST'"
+        ResponseType: DEFAULT_4XX
+        RestApiId:
+          Ref: ApiGatewayRestApi
 
-    ImageSearch:
-      Type: AWS::Elasticsearch::Domain
-      Properties: 
-        ElasticsearchVersion: '6.3'
-        DomainName: images-search-${self:provider.stage}
-        ElasticsearchClusterConfig:
-          DedicatedMasterEnabled: false
-          InstanceCount: '1'
-          ZoneAwarenessEnabled: false
-          InstanceType: t2.small.elasticsearch
-        EBSOptions:
-          EBSEnabled: true
-          Iops: 0
-          VolumeSize: 10
-          VolumeType: 'gp2'
+#    ImageSearch:
+#      Type: AWS::Elasticsearch::Domain
+#      Properties: 
+#        ElasticsearchVersion: '6.3'
+#        DomainName: images-search-${self:provider.stage}
+#        ElasticsearchClusterConfig:
+#          DedicatedMasterEnabled: false
+#          InstanceCount: '1'
+#          ZoneAwarenessEnabled: false
+#          InstanceType: t2.small.elasticsearch
+#        EBSOptions:
+#          EBSEnabled: true
+#          Iops: 0
+#          VolumeSize: 10
+#          VolumeType: 'gp2'
 
-        AccessPolicies:
-          Version: '2012-10-17'
-          Statement:
-            -
-              Effect: Allow
-              Principal:
-                AWS: '*'
-              Action: 'es:*'
-              Resource: '*'
+#        AccessPolicies:
+#          Version: '2012-10-17'
+#          Statement:
+#            -
+#              Effect: Allow
+#              Principal:
+#                AWS: '*'
+#              Action: 'es:*'
+#              Resource: '*'

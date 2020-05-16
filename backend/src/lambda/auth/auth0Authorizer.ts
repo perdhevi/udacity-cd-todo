@@ -40,11 +40,12 @@ WakPsreU10aslyGicxDvyI/M+bEixFU/lKHqp8VL1PWZOHIgH6KB59d6M4JM8fM7
 export const handler = async (
   event: CustomAuthorizerEvent
 ): Promise<CustomAuthorizerResult> => {
+  console.log(event.authorizationToken);
   logger.info('Authorizing a user', event.authorizationToken)
   try {
     const jwtToken = await verifyToken(event.authorizationToken)
     logger.info('User was authorized', jwtToken)
-
+    console.log(jwtToken.sub);
     return {
       principalId: jwtToken.sub,
       policyDocument: {
@@ -60,7 +61,7 @@ export const handler = async (
     }
   } catch (e) {
     logger.error('User not authorized', { error: e.message })
-
+    console.log(e)
     return {
       principalId: 'user',
       policyDocument: {
@@ -80,16 +81,16 @@ export const handler = async (
 async function verifyToken(authHeader: string): Promise<JwtPayload> {
   const token = getToken(authHeader)
 
-  
-
   const jwt: Jwt = decode(token, { complete: true }) as Jwt
+  console.log("Decode token...")
+  console.log(jwt);
 
   // TODO: Implement token verification
   // You should implement it similarly to how it was implemented for the exercise for the lesson 5
   // You can read more about how to do this here: https://auth0.com/blog/navigating-rs256-and-jwks/
-  
-
-  return verify(jwt.payload.sub, cert, { algorithms: ['RS256'] }) as JwtPayload;
+  const payload = verify(token, cert, { algorithms: ['RS256'] }) as JwtPayload;
+  console.log(payload);
+  return payload
 }
 
 function getToken(authHeader: string): string {
@@ -100,6 +101,9 @@ function getToken(authHeader: string): string {
 
   const split = authHeader.split(' ')
   const token = split[1]
+
+  console.log("verifyToken...")
+  console.log(token)
 
   return token
 }

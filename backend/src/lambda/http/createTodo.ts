@@ -20,18 +20,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
   const _now = new Date();
   const newTodo: CreateTodoRequest = JSON.parse(event.body)
 
-  //checking property needed
-
-
-
-  //const authorizaton = event.headers.Authorization
-  //const split = authorizaton.split(' ')
-  //const jwtToken = split[1]
-  //TODO: add authorization
-
-
-
-  const newItem ={
+  const item ={
     todoId : _todoId,
     createdAt : _now.toISOString(),
     userId : getUserId(event),
@@ -39,19 +28,20 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     done : false
 
   }
-    console.log(newItem)
+    console.log(item)
   await docClient.put({
     TableName: todoTable,
-    Item: newItem
+    Item: item
   }).promise().then(res => res).catch(err => console.log(err));
   // DONE: Implement creating a new TODO item
   return {
     statusCode: 201,
     headers: {
-      'Access-Control-Allow-Origin': '*'
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Credentials': true,
     },
     body: JSON.stringify({
-      newItem
+      item
     }) 
   }
 }

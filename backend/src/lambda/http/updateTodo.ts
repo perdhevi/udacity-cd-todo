@@ -5,6 +5,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyHandler, APIGatewayProxyResult } f
 import { UpdateTodoRequest } from '../../requests/UpdateTodoRequest'
 
 import * as AWS from 'aws-sdk';
+import { getUserId } from '../utils';
 
 
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
@@ -14,6 +15,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
 
   const updatedTodo ={
     todoId: _todoId,
+    
     ...updatedBody
   };
   console.log(updatedTodo);
@@ -23,9 +25,10 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
 
   const queryRest = await docClient.query({
     TableName: todoTable,
-    KeyConditionExpression: 'todoId = :paritionKey',
+    KeyConditionExpression: 'todoId = :paritionKey AND userId = :hashKey' ,
     ExpressionAttributeValues: {
-      ':paritionKey': _todoId
+      ':paritionKey': _todoId,
+      ':hashKey': getUserId(event)
     }
   })
   .promise();
@@ -60,7 +63,8 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
   return {
     statusCode: 204,
     headers: {
-      'Access-Control-Allow-Origin': '*'
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Credentials': true,
     },
     body: JSON.stringify({
       updatedTodo
