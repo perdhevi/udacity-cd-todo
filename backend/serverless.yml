@@ -69,16 +69,17 @@ provider:
       Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.CONNECTIONS_TABLE}
 
 custom:
-  topicName: imagesTopic-${self:provider.stage}
   documentation:
     api:
       info:
         version: 1.0.0
         title: Todo List API
     models:
-      - name: ImageRequest
+      - name: TodoRequest
         contentType: application/json
-        schema: ${file(models/create-image-request.json)}
+        schema: ${file(src/models/create-todo-model.json)}
+  topicName: imagesTopic-${self:provider.stage}
+
 
 functions:
   Auth:
@@ -103,6 +104,12 @@ functions:
           path: todos
           authorizer: Auth
           cors: true
+          reqValidatorName: RequestBodyValidator
+          documentation:
+            summary: Create a new Todo
+            description: Create a new Todo
+            requestModels:
+              'application/json': TodoRequest
 
 
   # TODO: Configure this function

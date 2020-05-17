@@ -14,13 +14,14 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
   const todoTable = process.env.TODO_TABLE;
 
   // DONE: Remove a TODO item by id
+  const userId = getUserId(event)
 
   const queryRest = await docClient.query({
     TableName: todoTable,
     KeyConditionExpression: 'todoId = :paritionKey AND userId = :hashKey',
     ExpressionAttributeValues: {
       ':paritionKey': _todoId,
-      ':hashKey': getUserId(event)
+      ':hashKey': userId
     }
   })
   .promise();  
@@ -39,7 +40,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     TableName: todoTable,
     Key: { 
       'todoId': _todoId,
-      'createdAt' : queryRest.Items[0].createdAt
+      'userId' : queryRest.Items[0].userId
     }
   }).promise().then(res => res).catch(err => console.log(err));
 

@@ -37,7 +37,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
   await docClient.update({
     TableName: todoTable,
     Key: { 'todoId': _todoId,
-      'createdAt' : queryRest.Items[0].createdAt
+      'userId' : queryRest.Items[0].userId
     },
     ExpressionAttributeValues: {
       ':name' : updatedTodo.name,

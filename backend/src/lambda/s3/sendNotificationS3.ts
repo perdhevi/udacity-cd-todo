@@ -9,6 +9,8 @@ const ImagesTable = process.env.IMAGES_TABLE;
 const stage = process.env.STAGE;
 const apiId = process.env.API_ID;
 
+const todoTable = process.env.TODO_TABLE;
+
 const _now = new Date();
 
 const connectionParams = {
@@ -17,6 +19,7 @@ const connectionParams = {
 }
 
 const apiGateway = new AWS.ApiGatewayManagementApi(connectionParams);
+
 
 export const handler: SNSHandler = async (event: SNSEvent) => {
     console.log('Processing SNS Event' , JSON.stringify(event));
@@ -32,6 +35,39 @@ export const handler: SNSHandler = async (event: SNSEvent) => {
     }
 }
 
+async function updateTable(_todoId, url){
+    //find the todo item
+    console.log('-----updating todo table-----');
+    console.log('find : ',_todoId);
+    const queryRest = await docClient.query({
+        TableName: todoTable,
+        KeyConditionExpression: 'todoId = :paritionKey' ,
+        ExpressionAttributeValues: {
+          ':paritionKey': _todoId
+        }
+      })
+      .promise();        
+
+      if(queryRest.Count === 0 ){
+          console.log('Nooooo');
+          return
+      }else{
+        console.log('found and running update')
+        await docClient.update({
+            TableName: todoTable,
+            Key: { 'todoId': _todoId,
+              'userId' : queryRest.Items[0].userId
+            },
+            ExpressionAttributeValues: {
+              ':attachmentUrl' : url
+            },
+            UpdateExpression: 'SET attachmentUrl = :attachmentUrl', 
+        
+            ReturnValues:"UPDATED_NEW"
+          }).promise()          
+      }
+
+}
 
 //export const handler: S3Handler = async ( event: S3Event ) => {
 async function processS3Event( s3Event: S3Event)  {
@@ -44,13 +80,17 @@ async function processS3Event( s3Event: S3Event)  {
         const newItem = {
             todoId : key,
             timestamp : _now.toISOString(),
-            imageId : key
+            imageId : key,
+            attachmentUrl: `https://${record.s3.bucket.name}.s3.amazonaws.com/${key}`
         }
 
         await docClient.put({
             TableName: ImagesTable,
             Item: newItem
           }).promise().then(res => res).catch(err => console.log(err));
+
+        await updateTable(key,`https://${record.s3.bucket.name}.s3.amazonaws.com/${key}`);
+
         console.log("Processing websocket");
         console.log(JSON.stringify(connectionParams));
 
