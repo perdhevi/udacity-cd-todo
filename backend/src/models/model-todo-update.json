@@ -1,15 +1,10 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
-    "title": "my-type",
+    "title": "todo-update",
     "type": "object",
     "properties": 
       {
-        "userId": { "type": "string" },
-        "todoId": { "type": "string" },
-        "createdAt": { "type": "string" },
         "name": { "type": "string" },
         "dueDate": { "type": "string" }
       }
-    ,
-    "required": [ "todoId"]
   }

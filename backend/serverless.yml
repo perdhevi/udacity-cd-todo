@@ -75,9 +75,12 @@ custom:
         version: 1.0.0
         title: Todo List API
     models:
-      - name: TodoRequest
+      - name: TodoCreateRequest
         contentType: application/json
-        schema: ${file(src/models/create-todo-model.json)}
+        schema: ${file(src/models/model-todo-create.json)}
+      - name: TodoUpdateRequest
+        contentType: application/json
+        schema: ${file(src/models/model-todo-update.json)}
   topicName: imagesTopic-${self:provider.stage}
 
 
@@ -109,7 +112,7 @@ functions:
             summary: Create a new Todo
             description: Create a new Todo
             requestModels:
-              'application/json': TodoRequest
+              'application/json': TodoCreateRequest
 
 
   # TODO: Configure this function
@@ -121,6 +124,12 @@ functions:
           path: todos/{todoId}
           authorizer: Auth
           cors: true
+          reqValidatorName: RequestBodyValidator
+          documentation:
+            summary: Update a Todo
+            description: Update a Todo
+            requestModels:
+              'application/json': TodoUpdateRequest
 
   # TODO: Configure this function
   DeleteTodo:
