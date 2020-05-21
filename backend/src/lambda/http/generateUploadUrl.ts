@@ -3,12 +3,12 @@ import * as AWS from 'aws-sdk';
 
 import { APIGatewayProxyEvent, APIGatewayProxyResult, APIGatewayProxyHandler } from 'aws-lambda'
 
+
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-  const todoId = event.pathParameters.todoId
+  const todoId = event.pathParameters.todoId;
   const s3bucket = process.env.IMAGES_S3_BUCKET;
   //const urlExpiration = process.env.SIGNED_URL_EXPIRATION
   console.log(todoId)
-  // TODO: Return a presigned URL to upload a file for a TODO item with the provided id
 
   const s3 = new AWS.S3({
     signatureVersion: 'v4' // Use Sigv4 algorithm

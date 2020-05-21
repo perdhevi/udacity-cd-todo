@@ -16,14 +16,12 @@ provider:
     TODO_TABLE: Todo-${self:provider.stage}
     AUTH0_SECRET: u4EpfVutIzcwGCnI3aiWCgeclV_LwomuAIh8w4oi6aENmSRxWGvfzMVnhfXNQwQW
     INDEX_NAME: Todo-name-${self:provider.stage}
-    IMAGES_TABLE: Images-${self:provider.stage}
-    IMAGE_ID_INDEX: ImageIdIndex
     IMAGES_S3_BUCKET: udacity-todo-images-${self:provider.stage}
     CONNECTIONS_TABLE: Connections-${self:provider.stage}
     CONNECTIONS_INDEX: ConnectionsIndex
     
     
-    SIGNED_URL_EXPIRATION: 300
+    SIGNED_URL_EXPIRATION: 3000
 
 custom:
   documentation:
@@ -45,7 +43,6 @@ functions:
   Auth:
     handler: src/lambda/auth/auth0Authorizer.handler
 
-  #TODO: Configure this function
   GetTodos:
     handler: src/lambda/http/getTodos.handler
     events:
@@ -64,7 +61,6 @@ functions:
           - dynamodb:Query
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODO_TABLE}/*
 
-  # TODO: Configure this function
   CreateTodo:
     handler: src/lambda/http/createTodo.handler
     events:
@@ -91,9 +87,6 @@ functions:
           
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODO_TABLE}/*
 
-
-
-  # TODO: Configure this function
   UpdateTodo:
     handler: src/lambda/http/updateTodo.handler
     events:
@@ -120,7 +113,6 @@ functions:
           - dynamodb:UpdateItem
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODO_TABLE}/*
 
-  # TODO: Configure this function
   DeleteTodo:
     handler: src/lambda/http/deleteTodo.handler
     events:
@@ -141,7 +133,6 @@ functions:
           - dynamodb:DeleteItem
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODO_TABLE}/*
 
-  # TODO: Configure this function
   GenerateUploadUrl:
     handler: src/lambda/http/generateUploadUrl.handler
     events:
@@ -154,9 +145,7 @@ functions:
       - Effect: Allow
         Action:
           - s3:*
-        Resource: arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}/*  #TODO: add image URL DB
-
-
+        Resource: arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}/*  
 
   SendUploadNotification:
     environment:
@@ -187,14 +176,11 @@ functions:
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODO_TABLE}/*
       - Effect: Allow
         Action:
-#          - dynamodb:DescribeTable
-#          - dynamodb:Query
-#          - dynamodb:Scan
-          - dynamodb:PutItem
-#          - dynamodb:GetItem
-#          - dynamodb:UpdateItem
-#          - dynamodb:DeleteItem
-        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.IMAGES_TABLE}
+          - dynamodb:Scan
+          - dynamodb:UpdateItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.CONNECTIONS_TABLE}
+
+
   ConnectHandler:
     handler: src/lambda/websocket/connect.handler
     events:
@@ -203,13 +189,7 @@ functions:
     iamRoleStatements:
       - Effect: Allow
         Action:
-#          - dynamodb:DescribeTable
-#          - dynamodb:Query
-#          - dynamodb:Scan
           - dynamodb:PutItem
-#          - dynamodb:GetItem
-#          - dynamodb:UpdateItem
-#          - dynamodb:DeleteItem
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.CONNECTIONS_TABLE}
 
   DisconnectHandler:
@@ -220,12 +200,6 @@ functions:
     iamRoleStatements:
       - Effect: Allow
         Action:
-#          - dynamodb:DescribeTable
-#          - dynamodb:Query
-#          - dynamodb:Scan
-#          - dynamodb:PutItem
-#          - dynamodb:GetItem
-#          - dynamodb:UpdateItem
           - dynamodb:DeleteItem
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.CONNECTIONS_TABLE}
 
@@ -281,30 +255,6 @@ resources:
         BillingMode: PAY_PER_REQUEST
         TableName: ${self:provider.environment.CONNECTIONS_TABLE}
 
-    ImagesDynamoDBTable:
-      Type: "AWS::DynamoDB::Table"
-      Properties:
-        AttributeDefinitions:
-          - AttributeName: todoId
-            AttributeType: S
-          - AttributeName: timestamp
-            AttributeType: S
-          - AttributeName: imageId
-            AttributeType: S
-        KeySchema:
-          - AttributeName: todoId
-            KeyType: HASH
-          - AttributeName: timestamp
-            KeyType: RANGE
-        BillingMode: PAY_PER_REQUEST
-        TableName: ${self:provider.environment.IMAGES_TABLE}
-        GlobalSecondaryIndexes:
-          - IndexName: ${self:provider.environment.IMAGE_ID_INDEX}
-            KeySchema:
-            - AttributeName: imageId
-              KeyType: HASH
-            Projection:
-              ProjectionType: ALL
 
     AttachmentsBucket:
       Type: AWS::S3::Bucket

@@ -5,13 +5,12 @@ import * as AWS from 'aws-sdk'
 const docClient = new AWS.DynamoDB.DocumentClient();
 
 const connectionTable = process.env.CONNECTIONS_TABLE;
-const ImagesTable = process.env.IMAGES_TABLE;
 const stage = process.env.STAGE;
 const apiId = process.env.API_ID;
 
 const todoTable = process.env.TODO_TABLE;
 
-const _now = new Date();
+
 
 const connectionParams = {
     apiVersion: "2018-11-29",
@@ -35,15 +34,16 @@ export const handler: SNSHandler = async (event: SNSEvent) => {
     }
 }
 
-async function updateTable(_todoId, url){
+async function updateTable(key, url){
     //find the todo item
+    
     console.log('-----updating todo table-----');
-    console.log('find : ',_todoId);
+    console.log('find : ',key);
     const queryRest = await docClient.query({
         TableName: todoTable,
         KeyConditionExpression: 'todoId = :paritionKey' ,
         ExpressionAttributeValues: {
-          ':paritionKey': _todoId
+          ':paritionKey': key.todoId
         }
       })
       .promise();        
@@ -55,7 +55,7 @@ async function updateTable(_todoId, url){
         console.log('found and running update')
         await docClient.update({
             TableName: todoTable,
-            Key: { 'todoId': _todoId,
+            Key: { 'todoId': key,
               'userId' : queryRest.Items[0].userId
             },
             ExpressionAttributeValues: {
@@ -74,20 +74,6 @@ async function processS3Event( s3Event: S3Event)  {
     for ( const record of s3Event.Records) {
         const key = record.s3.object.key
         console.log("processing key ", record.s3.object);
-
-        //populate the image todo
-
-        const newItem = {
-            todoId : key,
-            timestamp : _now.toISOString(),
-            imageId : key,
-            attachmentUrl: `https://${record.s3.bucket.name}.s3.amazonaws.com/${key}`
-        }
-
-        await docClient.put({
-            TableName: ImagesTable,
-            Item: newItem
-          }).promise().then(res => res).catch(err => console.log(err));
 
         await updateTable(key,`https://${record.s3.bucket.name}.s3.amazonaws.com/${key}`);
 
