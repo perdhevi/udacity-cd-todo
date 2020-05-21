@@ -17,7 +17,9 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
 
   // DONE: Remove a TODO item by id
   const userId = getUserId(event)
-
+  console.log('deleting');
+  console.log(userId);
+  console.log(_todoId);
   await todos.deleteTodo(_todoId, userId);
   /*
   const queryRest = await docClient.query({

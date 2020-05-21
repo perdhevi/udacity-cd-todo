@@ -222,21 +222,21 @@ resources:
         TableName: ${self:provider.environment.TODO_TABLE}      
         BillingMode: PAY_PER_REQUEST
         AttributeDefinitions:
-          - AttributeName: todoId
-            AttributeType: S
           - AttributeName: userId
+            AttributeType: S
+          - AttributeName: todoId
             AttributeType: S
         KeySchema:
-          - AttributeName: todoId
-            KeyType: HASH        
           - AttributeName: userId
+            KeyType: HASH        
+          - AttributeName: todoId
             KeyType: RANGE        
         GlobalSecondaryIndexes:
           - IndexName: ${self:provider.environment.INDEX_NAME}
             KeySchema:
-              - AttributeName: userId
-                KeyType: HASH
               - AttributeName: todoId
+                KeyType: HASH
+              - AttributeName: userId
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL # What attributes will be copied to an index

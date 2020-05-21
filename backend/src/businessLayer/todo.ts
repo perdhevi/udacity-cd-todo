@@ -54,3 +54,10 @@ export async function deleteTodo(todoId,userId): Promise<any>{
     console.log('------BL end--------');
     return result;
 }
+
+export async function updateURL(todoId, url): Promise <any> {
+    console.log('------BL start--------');  
+    const result = await todoAccess.updateTodoAttachment(todoId, url);  
+    console.log('------BL end--------');
+    return result;
+}

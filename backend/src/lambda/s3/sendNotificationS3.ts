@@ -1,17 +1,19 @@
 import { S3Event, SNSHandler, SNSEvent } from 'aws-lambda'
 import 'source-map-support/register'
 import * as AWS from 'aws-sdk'
+import {ConnectionAccess } from '../../dataLayer/ConnectionAccess'
 
-const docClient = new AWS.DynamoDB.DocumentClient();
+//const docClient = new AWS.DynamoDB.DocumentClient();
 
-const connectionTable = process.env.CONNECTIONS_TABLE;
+//const connectionTable = process.env.CONNECTIONS_TABLE;
 const stage = process.env.STAGE;
 const apiId = process.env.API_ID;
 
-const todoTable = process.env.TODO_TABLE;
+//const todoTable = process.env.TODO_TABLE;
 
+import * as todos from '../../businessLayer/todo'
 
-
+const conn = new ConnectionAccess();
 const connectionParams = {
     apiVersion: "2018-11-29",
     endpoint: `${apiId}.execute-api.us-east-1.amazonaws.com/${stage}`
@@ -35,41 +37,10 @@ export const handler: SNSHandler = async (event: SNSEvent) => {
 }
 
 async function updateTable(key, url){
-    //find the todo item
-    
-    console.log('-----updating todo table-----');
-    console.log('find : ',key);
-    const queryRest = await docClient.query({
-        TableName: todoTable,
-        KeyConditionExpression: 'todoId = :paritionKey' ,
-        ExpressionAttributeValues: {
-          ':paritionKey': key.todoId
-        }
-      })
-      .promise();        
-
-      if(queryRest.Count === 0 ){
-          console.log('Nooooo');
-          return
-      }else{
-        console.log('found and running update')
-        await docClient.update({
-            TableName: todoTable,
-            Key: { 'todoId': key,
-              'userId' : queryRest.Items[0].userId
-            },
-            ExpressionAttributeValues: {
-              ':attachmentUrl' : url
-            },
-            UpdateExpression: 'SET attachmentUrl = :attachmentUrl', 
-        
-            ReturnValues:"UPDATED_NEW"
-          }).promise()          
-      }
+    await todos.updateURL(key, url);
 
 }
 
-//export const handler: S3Handler = async ( event: S3Event ) => {
 async function processS3Event( s3Event: S3Event)  {
     for ( const record of s3Event.Records) {
         const key = record.s3.object.key
@@ -79,16 +50,17 @@ async function processS3Event( s3Event: S3Event)  {
 
         console.log("Processing websocket");
         console.log(JSON.stringify(connectionParams));
-
+        /*
         const connections = await docClient.scan({
             TableName: connectionTable
         }).promise()
-
+        */
+       const connections = await conn.getAllConnection()
         const payload = {
             imageId : key
         }
 
-        for (const connection of connections.Items){
+        for (const connection of connections){
             const connectionId = connection.id;
 
             await sendMessageToClient(connectionId, payload)
@@ -113,14 +85,15 @@ async function sendMessageToClient(connectionId, payload) {
         console.log("failed to send message", JSON.stringify(e))
         if(e.statusCode === 410 ){   // empty 
             console.log("Stale connection");
-
+            /*
             await docClient.delete({
                 TableName:connectionTable,
                 Key: {
                     id: connectionId
                 }
             }).promise();
-
+            */
+           await conn.deleteTodo(connectionId)
         }
     }
 }

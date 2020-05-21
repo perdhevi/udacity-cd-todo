@@ -1,6 +1,8 @@
 import { TodoItem } from '../models/TodoItem'
 import { TodoUpdate } from '../models/TodoUpdate'
 import * as AWS from 'aws-sdk';
+import { createLogger } from '../utils/logger'
+const logger = createLogger('TodoAccess')
 
 export class TodoAccess {
     constructor(
@@ -12,7 +14,7 @@ export class TodoAccess {
     async getTodos(userId ): Promise<TodoItem[]> {
         const result = await this.docClient.query({
             TableName: this.todoTable,
-            IndexName: this.todoIndex,
+//            IndexName: this.todoIndex,
             KeyConditionExpression: 'userId = :userId',
             ExpressionAttributeValues: {
                 ':userId': userId
@@ -25,13 +27,13 @@ export class TodoAccess {
         await this.docClient.put({
             TableName: this.todoTable,
             Item: item
-          }).promise().then(res => res).catch(err => console.log(err));
+          }).promise().then(res => res).catch(err => logger.info(err));
         
           return item;
     }
 
     async getTodo(userId, todoId) : Promise<TodoItem>{
-        console.log('------ DL:getTodo Start---------');
+        logger.info('------ DL:getTodo Start---------');
         const queryRest = await this.docClient.query({
             TableName: this.todoTable,
             KeyConditionExpression: 'todoId = :paritionKey AND userId = :hashKey' ,
@@ -42,16 +44,16 @@ export class TodoAccess {
           })
           .promise();
               
-          console.log(queryRest);  
+          logger.info(queryRest);  
           
           const items = queryRest.Items[0];
-          console.log(items);
-          console.log('------ DL:getTodo end---------');
+          logger.info(items);
+          logger.info('------ DL:getTodo end---------');
           return items as TodoItem;        
     }
 
     async updateTodo(todoId, userId, updatedTodo: TodoUpdate) : Promise<any> {
-        console.log('------ DL:updateTodo Start---------');
+        logger.info('------ DL:updateTodo Start---------');
 
         const updateResult = await this.docClient.update({
             TableName: this.todoTable,
@@ -69,30 +71,50 @@ export class TodoAccess {
             UpdateExpression: 'SET #nm = :name, dueDate = :dueDate, done = :done', 
         
             ReturnValues:"UPDATED_NEW"
-          }).promise().then(res => {console.log(res);
+          }).promise().then(res => {logger.info(res);
             return res.Attributes as TodoUpdate;
           }
-          ).catch(err =>  console.log(err));
+          ).catch(err =>  logger.info(err));
 
-          console.log(updateResult)
-          console.log('------ DL:updateTodo End---------');
+          logger.info(updateResult)
+          logger.info('------ DL:updateTodo End---------');
         return updateResult
     }
 
-    async updateTodoAttachment(todoId, userId, attachmentUrl): Promise<any>{
-        await this.docClient.update({
+    async updateTodoAttachment(todoId, attachmentUrl): Promise<any>{
+        logger.info('------ DL:updateTodoAttachment Start---------');
+        logger.info('-----updating todo table-----');
+        logger.info('find : ',todoId);
+        const queryRest = await this.docClient.query({
             TableName: this.todoTable,
-            Key: { 'todoId': todoId,
-              'userId' : userId
-            },
+            IndexName: this.todoIndex,
+            KeyConditionExpression: 'todoId = :paritionKey' ,
             ExpressionAttributeValues: {
-              ':attachmentUrl' : attachmentUrl
-            },
-            UpdateExpression: 'SET attachmentUrl = :attachmentUrl', 
-        
-            ReturnValues:"UPDATED_NEW"
-          }).promise()          
-
+              ':paritionKey': todoId
+            }
+          })
+          .promise();        
+    
+          if(queryRest.Count === 0 ){
+            logger.info('Nooooo');
+            return
+        }else{
+          logger.info('found and running update')
+          const userId = queryRest.Items[0].userId;
+          await this.docClient.update({
+              TableName: this.todoTable,
+              Key: { 'todoId': todoId,
+                'userId' : userId
+              },
+              ExpressionAttributeValues: {
+                ':attachmentUrl' : attachmentUrl
+              },
+              UpdateExpression: 'SET attachmentUrl = :attachmentUrl', 
+          
+              ReturnValues:"UPDATED_NEW"
+            }).promise().then(res => { return res})          
+          }
+          logger.info('------ DL:updateTodoAttachment End---------');
     }
 
     async deleteTodo(userId, todoId) : Promise<any>{
@@ -102,7 +124,7 @@ export class TodoAccess {
               'todoId': todoId,
               'userId' : userId
             }
-          }).promise().then(res => {return res}).catch(err => console.log(err));
+          }).promise().then(res => {return res}).catch(err => logger.info(err));
         
         }
 
