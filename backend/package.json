@@ -13,7 +13,7 @@
     "jsonwebtoken": "^8.5.1",
     "jwks-rsa": "^1.7.0",
     "middy": "^0.27.1",
-    "serverless": "^1.70.0",
+    "serverless": "^3.25.1",
     "source-map-support": "^0.5.16",
     "uuid": "^3.4.0",
     "winston": "^3.2.1"
